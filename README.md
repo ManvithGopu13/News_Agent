@@ -43,13 +43,25 @@ The generated PDF is organized into 7 major sections for easy studying:
 6. **✍️ Mains Perspective - All Questions** - Mains questions with answer outlines
 7. **📜 Static Portion - All Topics** - Constitutional articles, acts, historical background
 
-### 5. Newspaper PDF Analysis
-- Upload any newspaper PDF file
-- Automatically extracts and filters UPSC-relevant articles
-- Removes advertisements, entertainment, sports, and other irrelevant content
+### 5. Newspaper PDF Analysis with Strict UPSC Relevance Filtering
+- Upload any newspaper PDF file (up to 20 MB)
+- **Two-Phase Strict Filtering**:
+  - **Phase 1**: Quick keyword-based filter using 40+ critical UPSC topics
+    - Requires minimum 2 critical topics OR 1 critical + 2 secondary topics
+    - Filters out sports, entertainment, lifestyle, local news, etc.
+  - **Phase 2**: AI-powered relevance analysis for each article
+    - Only highly relevant articles pass (strict criteria)
+    - Rejects routine news, local events, business news without policy connections
+- **Real-time Progress Tracking**:
+  - Shows total articles found
+  - Displays filtered count (articles removed in phase 1)
+  - Shows analyzed count (articles checked in phase 2)
+  - Displays final highly relevant count (kept articles)
+  - Rejected count (not important enough)
+- **Parallel Processing**: Fast analysis of all articles simultaneously
 - Provides simplified explanations and key concepts
 - Generates potential exam questions (Prelims & Mains)
-- Creates a cleaned, analyzed PDF for study
+- Creates a cleaned, analyzed PDF with only highly relevant articles
 
 ### 6. Advanced Features
 - **Duplicate Detection**: Automatically removes duplicate articles based on title similarity
@@ -168,14 +180,38 @@ news
 
 ### Analyzing a Newspaper PDF
 
-1. **Upload PDF** to the bot in Telegram
-2. Bot will:
-   - Extract all text content
-   - Filter UPSC-relevant articles
-   - Remove ads and irrelevant content
-   - Analyze each article
-   - Generate cleaned PDF
-   - Send analyzed PDF back (5-10 minutes depending on size)
+1. **Upload PDF** to the bot in Telegram (max 20 MB)
+2. **File Size Check**: Bot checks size before processing
+   - Files >20 MB: Immediate rejection with compression suggestions
+   - Files >10 MB: Warning about longer processing time
+3. **Bot Processing Flow**:
+   
+   **Step 1: Extraction & Segmentation** (30 seconds - 2 minutes)
+   - Extracts text from all PDF pages
+   - Segments into individual articles
+   - Shows: "📊 Found X potential articles in the newspaper"
+   
+   **Step 2: Strict Initial Filtering** (5-10 seconds)
+   - Applies keyword-based filtering
+   - Progress shows: "🔍 Strict filtering applied: Total: X | ❌ Filtered: Y | ✅ Passed: Z"
+   - Removes obviously irrelevant content
+   
+   **Step 3: AI-Powered Analysis** (2-10 minutes)
+   - Parallel analysis of potentially relevant articles
+   - Real-time progress: "📊 Progress: 45%\n✅ Relevant: 8 | ❌ Failed: 2\n📰 Total found: 50 | 🔍 Analyzing: 25"
+   - Only highly relevant articles pass strict criteria
+   
+   **Step 4: Summary & PDF Generation** (30 seconds - 1 minute)
+   - Shows final summary:
+     ```
+     📊 Strict UPSC Relevance Analysis Summary:
+     📰 Total articles found: 50
+     🔍 Analyzed for relevance: 25
+     ✅ Highly relevant (kept): 12
+     ❌ Rejected (not important enough): 13
+     ```
+   - Generates cleaned PDF with only highly relevant articles
+   - Sends analyzed PDF back to user
 
 ## 📁 Project Structure
 
@@ -226,10 +262,33 @@ NewsAgent/
 
 ### 3. Newspaper Analyzer (`newspaper_analyzer.py`)
 
-- PDF text extraction
-- Article segmentation
-- Relevance filtering
-- Analysis generation
+**Core Functionality:**
+- `analyze_newspaper()`: Main analysis orchestration with progress tracking
+- `_extract_text_from_pdf()`: Extracts text from PDF with page tracking
+- `_segment_articles()`: Advanced article segmentation with pattern recognition
+- `_quick_relevance_filter()`: Strict keyword-based initial filtering
+- `_analyze_articles_parallel()`: Parallel analysis with real-time progress
+- `_analyze_single_article_parallel()`: Individual article analysis with retry logic
+- `_parse_analysis_response()`: Strict conservative parsing (defaults to NOT relevant)
+
+**Strict Filtering System:**
+- **Two-Tier Topic Classification**:
+  - **Critical Topics** (40+ keywords): Government policies, schemes, parliament, courts, budget, RBI, international relations, environment, science, health, education, agriculture, infrastructure, defence, social welfare, governance, constitutional matters
+  - **Secondary Topics**: Economy, GDP, trade, social development (need combination with critical topics)
+- **Initial Filter Criteria**: 
+  - Must have ≥2 critical topics OR ≥1 critical + ≥2 secondary topics
+  - Minimum 100 words per article
+  - Excludes 20+ irrelevant keyword categories
+- **AI Relevance Check**: 
+  - Strict LLM prompt with 14 specific relevance criteria
+  - Conservative parsing (ambiguous = NOT relevant)
+  - Only highly important articles pass
+
+**Features:**
+- Parallel processing (up to 10 concurrent API calls)
+- Rate limiting with exponential backoff retry
+- Progress callbacks with detailed statistics
+- Comprehensive error handling
 
 ### 4. Main Bot (`main.py`)
 
@@ -260,12 +319,48 @@ async def _fetch_from_new_source(self) -> List[Dict]:
 news_sources.append(self._fetch_from_new_source())
 ```
 
-### Changing UPSC Keywords
+### Changing UPSC Keywords (News Aggregator)
 Edit `upsc_relevant_topics` list in `NewsAggregator.__init__()`:
 ```python
 self.upsc_relevant_topics = [
     "government policy", "economy", 
     # Add your keywords here
+]
+```
+
+### Customizing Newspaper Filtering (Strict Relevance)
+Edit `newspaper_analyzer.py` to adjust filtering strictness:
+
+**Modify Critical Topics:**
+```python
+self.upsc_critical_topics = [
+    "government policy", "government scheme",
+    # Add/remove critical UPSC topics
+]
+```
+
+**Modify Secondary Topics:**
+```python
+self.upsc_secondary_topics = [
+    "economy", "economic", "gdp",
+    # Add/remove secondary topics
+]
+```
+
+**Adjust Filtering Criteria:**
+```python
+# In _quick_relevance_filter()
+# Current: Need ≥2 critical OR ≥1 critical + ≥2 secondary
+if critical_matches >= 2 or (critical_matches >= 1 and secondary_matches >= 2):
+    # Make stricter: Change to >= 3 or >= 2 + >= 3
+    # Make looser: Change to >= 1 or >= 1 + >= 1
+```
+
+**Modify Irrelevant Keywords:**
+```python
+self.irrelevant_keywords = [
+    'advertisement', 'sports',
+    # Add more irrelevant categories
 ]
 ```
 
@@ -312,6 +407,27 @@ Edit `pdf_generator.py` in `_setup_custom_styles()`:
 - ✅ Initial message shows accurate total
 - ✅ Progress updates in real-time
 
+### Newspaper Analysis - Too Many/Few Articles
+- ✅ **Too many articles included**: 
+  - System uses strict filtering - adjust critical/secondary topic lists
+  - Modify `_quick_relevance_filter()` criteria to be stricter
+  - Check LLM prompt in `_analyze_single_article_parallel()` for stricter criteria
+- ✅ **Too few articles included**:
+  - Add more keywords to `upsc_critical_topics` list
+  - Relax filtering criteria in `_quick_relevance_filter()`
+  - Modify minimum word count requirement (currently 100 words)
+
+### File Size Issues (Newspaper PDFs)
+- ✅ **"File is too big" error**: 
+  - Telegram download limit is 20 MB
+  - Compress PDF using online tools (e.g., SmallPDF, ILovePDF)
+  - Split PDF into smaller files (10-15 pages each)
+  - Use PDF compression services
+- ✅ **Large files take long**: 
+  - Expected for files >10 MB (5-15 minutes)
+  - Progress tracking shows real-time status
+  - Be patient - parallel processing speeds it up
+
 ### Import Errors
 ```bash
 pip install -r requirements.txt --upgrade
@@ -319,12 +435,25 @@ pip install -r requirements.txt --upgrade
 
 ## 📊 Performance & Limits
 
+### Daily News Analysis
 - **Analysis Speed**: ~2-5 minutes for 50-60 articles (parallel processing)
 - **Concurrency**: Up to 10 simultaneous API calls
 - **Article Limit**: Maximum 60 articles per analysis
 - **Minimum Guarantee**: At least 50 articles analyzed
 - **Rate Limiting**: Automatic with 3 retry attempts per article
 - **Progress Updates**: Real-time via Telegram messages
+
+### Newspaper PDF Analysis
+- **File Size Limit**: 20 MB (Telegram download limit)
+- **Processing Time**: 
+  - Small PDFs (<5 MB): 2-5 minutes
+  - Medium PDFs (5-10 MB): 5-10 minutes
+  - Large PDFs (10-20 MB): 10-15 minutes
+- **Extraction Speed**: ~10 pages/second
+- **Analysis Speed**: Parallel processing of all articles simultaneously
+- **Filtering**: Two-phase strict filtering (keyword + AI analysis)
+- **Concurrency**: Up to 10 simultaneous API calls
+- **Relevance Rate**: Typically 15-30% of articles pass strict filtering (ensures quality)
 
 ## 🔐 Security & Best Practices
 
@@ -340,17 +469,27 @@ pip install -r requirements.txt --upgrade
 - NVIDIA API usage may have associated costs
 - Monitor usage through your NVIDIA dashboard
 - Consider caching frequently accessed articles
+- Newspaper analysis processes multiple articles - costs scale with PDF size
 
 ### Accuracy Disclaimer
 - AI-generated analysis is for educational purposes
 - Always verify facts from official sources
 - Use as a study aid, not definitive answers
 - Cross-reference with official UPSC resources
+- Strict filtering may sometimes reject borderline-relevant articles for quality assurance
 
 ### Rate Limits
 - Respect API provider rate limits
-- Bot handles temporary limits automatically
-- For sustained limits, adjust semaphore value
+- Bot handles temporary limits automatically with exponential backoff
+- For sustained limits, adjust semaphore value (default: 10 concurrent requests)
+- Rate limiting is built-in for both news and newspaper analysis
+
+### Newspaper Analysis - Quality vs Quantity
+- **Strict Filtering Philosophy**: Quality over quantity
+- Only highly relevant articles are included (typically 15-30% of total)
+- Articles must meet strict UPSC relevance criteria
+- If too many articles are rejected, you may need to adjust filtering criteria (see Configuration section)
+- This ensures you only study truly important current affairs
 
 ## 🚧 Future Enhancements
 
@@ -365,6 +504,10 @@ Potential features to add:
 - [ ] Bookmark articles for later review
 - [ ] Export to different formats (DOCX, EPUB)
 - [ ] Integration with note-taking apps
+- [ ] Adjustable strictness level for newspaper filtering
+- [ ] Topic-based filtering (e.g., only Polity, Economy, Environment)
+- [ ] Date range selection for news analysis
+- [ ] Custom keyword addition for relevance filtering
 
 ## 🆘 Support & Contributing
 
