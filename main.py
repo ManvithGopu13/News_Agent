@@ -155,6 +155,7 @@ Let's start your UPSC preparation journey! 🚀
         document = update.message.document
         input_pdf_path = None
         output_pdf_path = None
+        progress_message = None
         
         if not document.file_name.endswith('.pdf'):
             await update.message.reply_text(
@@ -202,12 +203,47 @@ Let's start your UPSC preparation journey! 🚀
             downloaded_size_mb = os.path.getsize(input_pdf_path) / (1024 * 1024)
             logger.info(f"Downloaded PDF: {downloaded_size_mb:.2f} MB")
             
-            await update.message.reply_text("📖 Reading newspaper content...")
+            # Setup progress tracking for newspaper analysis
+            async def progress_callback(current: int, total: int, message: str):
+                """Send progress updates to Telegram for newspaper analysis."""
+                nonlocal progress_message
+                progress_text = f"📊 Progress: {current}%\n\n{message}"
+                
+                try:
+                    if progress_message is None:
+                        progress_message = await update.message.reply_text(progress_text)
+                    else:
+                        await progress_message.edit_text(progress_text)
+                except Exception as e:
+                    # If message is too old to edit, send a new one
+                    if "message is not modified" not in str(e).lower():
+                        logger.warning(f"Error updating progress message: {e}")
             
-            # Analyze the newspaper
-            analyzed_content = await self.newspaper_analyzer.analyze_newspaper(input_pdf_path)
+            # Analyze the newspaper with progress tracking
+            analyzed_content = await self.newspaper_analyzer.analyze_newspaper(
+                input_pdf_path,
+                progress_callback=progress_callback
+            )
             
-            await update.message.reply_text("✍️ Generating analyzed PDF...")
+            # Display summary of results
+            total_found = analyzed_content.get('total_articles_found', 0)
+            potentially_relevant = analyzed_content.get('potentially_relevant', 0)
+            final_relevant = analyzed_content.get('total_articles', 0)
+            
+            rejected = potentially_relevant - final_relevant
+            summary_msg = (
+                f"📊 Strict UPSC Relevance Analysis Summary:\n\n"
+                f"📰 Total articles found: {total_found}\n"
+                f"🔍 Analyzed for relevance: {potentially_relevant}\n"
+                f"✅ Highly relevant (kept): {final_relevant}\n"
+                f"❌ Rejected (not important enough): {rejected}\n\n"
+                f"📝 Generating analyzed PDF with only highly relevant articles..."
+            )
+            
+            if progress_message:
+                await progress_message.edit_text(summary_msg)
+            else:
+                await update.message.reply_text(summary_msg)
             
             # Generate new PDF
             date_str = datetime.now().strftime("%Y-%m-%d")
@@ -219,14 +255,23 @@ Let's start your UPSC preparation journey! 🚀
             )
             
             # Send the analyzed PDF
-            await update.message.reply_text("✅ Analysis complete! Sending your PDF...")
+            final_count = len(analyzed_content['articles'])
+            if progress_message:
+                await progress_message.edit_text("✅ Analysis complete! Sending your PDF...")
+            else:
+                await update.message.reply_text("✅ Analysis complete! Sending your PDF...")
+            
             with open(output_pdf_path, 'rb') as pdf_file:
                 await update.message.reply_document(
                     document=pdf_file,
                     filename=output_pdf_path,
-                    caption=f"📰 Analyzed Newspaper - {date_str}\n\n"
-                            f"Relevant articles: {len(analyzed_content['articles'])}\n"
-                            f"Filtered and simplified for UPSC preparation! 📚"
+                    caption=(
+                        f"📰 Analyzed Newspaper - {date_str}\n\n"
+                        f"📊 Total found: {total_found} articles\n"
+                        f"✅ Highly relevant: {final_count} articles\n"
+                        f"📚 Strictly filtered for UPSC preparation!\n"
+                        f"Only the most important articles are included."
+                    )
                 )
             
             # Cleanup
@@ -234,6 +279,11 @@ Let's start your UPSC preparation journey! 🚀
                 os.remove(input_pdf_path)
             if output_pdf_path and os.path.exists(output_pdf_path):
                 os.remove(output_pdf_path)
+            if progress_message:
+                try:
+                    await progress_message.delete()
+                except:
+                    pass
             logger.info(f"Newspaper analysis completed for user {update.effective_user.id}")
             
         except Exception as e:
@@ -275,6 +325,13 @@ Let's start your UPSC preparation journey! 🚀
             if output_pdf_path and os.path.exists(output_pdf_path):
                 try:
                     os.remove(output_pdf_path)
+                except:
+                    pass
+            
+            # Cleanup progress message on error
+            if progress_message:
+                try:
+                    await progress_message.delete()
                 except:
                     pass
 
