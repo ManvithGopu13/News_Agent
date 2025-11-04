@@ -153,6 +153,8 @@ Let's start your UPSC preparation journey! 🚀
     async def handle_document(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle PDF newspaper uploads."""
         document = update.message.document
+        input_pdf_path = None
+        output_pdf_path = None
         
         if not document.file_name.endswith('.pdf'):
             await update.message.reply_text(
@@ -160,17 +162,45 @@ Let's start your UPSC preparation journey! 🚀
             )
             return
         
-        await update.message.reply_text(
-            "📄 Newspaper PDF received!\n"
-            "🔍 Analyzing and extracting UPSC-relevant content...\n"
-            "This may take several minutes..."
-        )
+        # Check file size before processing
+        # Telegram's get_file() API has a 20MB limit for downloading
+        # Files up to 50MB can be sent, but downloading via get_file() fails for >20MB
+        file_size_mb = (document.file_size or 0) / (1024 * 1024)  # Convert bytes to MB
+        
+        if file_size_mb > 20:
+            await update.message.reply_text(
+                f"⚠️ File size ({file_size_mb:.1f} MB) exceeds the 20 MB download limit.\n\n"
+                f"📌 Please compress the PDF or split it into smaller files.\n"
+                f"💡 Recommended: Use PDF compression tools or send pages in smaller batches."
+            )
+            return
+        
+        if file_size_mb > 10:
+            await update.message.reply_text(
+                f"📄 Large PDF detected ({file_size_mb:.1f} MB).\n"
+                f"⏳ This may take 5-15 minutes to process. Please wait..."
+            )
+        else:
+            await update.message.reply_text(
+                "📄 Newspaper PDF received!\n"
+                "🔍 Analyzing and extracting UPSC-relevant content...\n"
+                "This may take several minutes..."
+            )
         
         try:
             # Download the PDF
             file = await context.bot.get_file(document.file_id)
             input_pdf_path = f"temp_input_{document.file_id}.pdf"
+            
+            # Use download_to_drive for reliable download
             await file.download_to_drive(input_pdf_path)
+            
+            # Verify file was downloaded
+            if not os.path.exists(input_pdf_path):
+                raise FileNotFoundError("Failed to download PDF file")
+            
+            downloaded_size_mb = os.path.getsize(input_pdf_path) / (1024 * 1024)
+            logger.info(f"Downloaded PDF: {downloaded_size_mb:.2f} MB")
             
             await update.message.reply_text("📖 Reading newspaper content...")
             
@@ -200,17 +230,53 @@ Let's start your UPSC preparation journey! 🚀
                 )
             
             # Cleanup
-            os.remove(input_pdf_path)
-            os.remove(output_pdf_path)
+            if input_pdf_path and os.path.exists(input_pdf_path):
+                os.remove(input_pdf_path)
+            if output_pdf_path and os.path.exists(output_pdf_path):
+                os.remove(output_pdf_path)
             logger.info(f"Newspaper analysis completed for user {update.effective_user.id}")
             
         except Exception as e:
-            logger.error(f"Error in newspaper analysis: {str(e)}")
-            await update.message.reply_text(
-                "❌ Sorry, there was an error analyzing the newspaper. Please ensure it's a valid PDF."
-            )
-            if os.path.exists(input_pdf_path):
-                os.remove(input_pdf_path)
+            error_msg = str(e)
+            logger.error(f"Error in newspaper analysis: {error_msg}")
+            
+            # Provide specific error messages
+            if "File is too big" in error_msg or "file size" in error_msg.lower():
+                await update.message.reply_text(
+                    f"❌ File too large to download via Telegram API.\n\n"
+                    f"📌 Telegram has a 20 MB limit for downloading files.\n"
+                    f"💡 Solutions:\n"
+                    f"• Compress the PDF using online tools\n"
+                    f"• Split the newspaper into smaller PDFs\n"
+                    f"• Use a PDF compression service\n"
+                    f"• Send pages in batches of 10-15 pages"
+                )
+            elif "timeout" in error_msg.lower():
+                await update.message.reply_text(
+                    "❌ Request timed out. The file might be too large or the connection is slow.\n"
+                    "Please try again with a smaller file or check your internet connection."
+                )
+            else:
+                await update.message.reply_text(
+                    f"❌ Sorry, there was an error analyzing the newspaper.\n\n"
+                    f"Error: {error_msg[:200]}\n\n"
+                    f"Please ensure:\n"
+                    f"• The PDF is valid and not corrupted\n"
+                    f"• File size is under 20 MB\n"
+                    f"• The PDF is not password protected"
+                )
+            
+            # Cleanup on error
+            if input_pdf_path and os.path.exists(input_pdf_path):
+                try:
+                    os.remove(input_pdf_path)
+                except:
+                    pass
+            if output_pdf_path and os.path.exists(output_pdf_path):
+                try:
+                    os.remove(output_pdf_path)
+                except:
+                    pass
 
     async def handle_text(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         """Handle text messages."""
