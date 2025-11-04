@@ -1,0 +1,400 @@
+# UPSC News Agent Telegram Bot 🎓📰
+
+An intelligent Telegram bot that helps UPSC Civil Services aspirants stay updated with relevant current affairs through automated news aggregation, analysis, and PDF generation. The bot uses NVIDIA LLM via LangChain for high-speed parallel analysis of news articles.
+
+## 🚀 Key Features
+
+### 1. Comprehensive News Aggregation
+- **Multiple Source Integration**: Automatically fetches news from 8+ major Indian news sources:
+  - **PIB India** (Press Information Bureau) - Official government releases
+  - **The Hindu** - National, International, Business news
+  - **Indian Express** - India, World, Business sections
+  - **Times of India** - Comprehensive coverage
+  - **Hindustan Times** - Multi-section news
+  - **Business Standard** - Economy, Politics, Current Affairs
+  - **Livemint** - Politics, Economy, News
+  - **Web Search** - Fallback for additional UPSC-relevant articles
+
+### 2. Source-Wise Article Summary
+- **Real-time Article Count**: Shows exactly how many articles were found from each source
+- **Clickable Links**: All articles include clickable links for quick access
+- **Organized Display**: Sources sorted by article count with detailed breakdown
+- **Smart Filtering**: Automatically filters for UPSC-relevant content using keyword matching
+
+### 3. High-Speed Parallel Analysis
+- **Parallel Processing**: Analyzes up to 60 articles simultaneously for maximum speed
+- **Progress Tracking**: Real-time progress updates showing:
+  - Current progress (X/Total articles)
+  - Successfully completed count
+  - Failed attempts count
+  - Live status updates via Telegram
+- **Rate Limiting**: Intelligent semaphore-based concurrency control (max 10 concurrent requests)
+- **Retry Logic**: Automatic retry with exponential backoff for rate limit errors (429)
+- **Minimum Guarantee**: Ensures analysis of at least 50 articles (fills with sample if needed)
+
+### 4. Comprehensive PDF Reports
+The generated PDF is organized into 7 major sections for easy studying:
+
+1. **📋 All Topics Covered** - Complete list of all analyzed articles with sources and dates
+2. **🎯 UPSC Relevance - All Topics** - Why each topic matters for UPSC (GS paper-wise)
+3. **🔑 Key Points - All Topics** - Main information from each article
+4. **📚 Concepts to Understand - All Topics** - Related concepts and background knowledge
+5. **📝 Prelims Perspective - All Questions** - Sample Prelims questions with answers
+6. **✍️ Mains Perspective - All Questions** - Mains questions with answer outlines
+7. **📜 Static Portion - All Topics** - Constitutional articles, acts, historical background
+
+### 5. Newspaper PDF Analysis
+- Upload any newspaper PDF file
+- Automatically extracts and filters UPSC-relevant articles
+- Removes advertisements, entertainment, sports, and other irrelevant content
+- Provides simplified explanations and key concepts
+- Generates potential exam questions (Prelims & Mains)
+- Creates a cleaned, analyzed PDF for study
+
+### 6. Advanced Features
+- **Duplicate Detection**: Automatically removes duplicate articles based on title similarity
+- **UPSC Relevance Filtering**: Keyword-based filtering for exam-relevant topics
+- **HTML Sanitization**: Properly handles HTML content for PDF generation
+- **Error Handling**: Comprehensive error handling with user-friendly messages
+- **Progress Persistence**: Progress updates persist even if individual articles fail
+
+## 📋 Prerequisites
+
+- Python 3.8 or higher
+- Telegram Bot Token (get from @BotFather on Telegram)
+- NVIDIA API Key and Model Name (for LLM inference)
+- Active internet connection for news fetching
+
+## 🛠️ Installation Steps
+
+### 1. Clone or Download the Project
+```bash
+mkdir upsc_news_bot
+cd upsc_news_bot
+# Copy all project files here
+```
+
+### 2. Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+**Required Packages:**
+- `python-telegram-bot==20.7` - Telegram bot framework
+- `langchain-nvidia-ai-endpoints` - NVIDIA LLM integration
+- `langchain-core` - Core LangChain functionality
+- `aiohttp==3.9.1` - Async HTTP client for web scraping
+- `beautifulsoup4==4.12.2` - HTML parsing
+- `feedparser==6.0.10` - RSS feed parsing
+- `PyPDF2==3.0.1` - PDF reading
+- `reportlab==4.0.7` - PDF generation
+- `python-dotenv==1.0.0` - Environment variable management
+
+### 3. Configure Environment Variables
+
+Create a `.env` file in the project root:
+```env
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token_here
+NVIDIA_API_KEY=your_nvidia_api_key_here
+NVIDIA_MODEL=your_model_name_here
+```
+
+**Getting your Telegram Bot Token:**
+1. Open Telegram and search for `@BotFather`
+2. Send `/newbot` command
+3. Follow instructions to create your bot
+4. Copy the token provided
+
+**Getting your NVIDIA API Key:**
+1. Visit NVIDIA AI Playground or API portal
+2. Sign up or log in
+3. Navigate to API Keys section
+4. Create a new API key and copy it
+5. Note your model name (e.g., `meta/llama-3-70b-instruct`)
+
+### 4. Run the Bot
+```bash
+python main.py
+```
+
+You should see: `Bot started successfully!`
+
+## 📱 Usage Guide
+
+### Starting the Bot
+1. Open Telegram and search for your bot (use the username you created)
+2. Send `/start` to see the welcome message
+
+### Getting Daily News Analysis
+
+Send the message:
+```
+news
+```
+
+**What happens:**
+1. 📊 **Gathering Phase** (10-30 seconds)
+   - Fetches news from all configured sources
+   - Removes duplicates
+   - Filters for UPSC relevance
+
+2. 📰 **Source Summary** (shown immediately)
+   - Displays article count by source
+   - Shows clickable links to all articles
+   - Example:
+     ```
+     📰 PIB India: 8 articles
+     1. [Clickable link to article]
+     2. [Clickable link to article]
+     ...
+     ```
+
+3. 🤖 **Analysis Phase** (2-5 minutes)
+   - Real-time progress updates:
+     ```
+     📊 Progress: 15/36
+     ✅ Completed: 12 | ❌ Failed: 3 | 📊 Progress: 15/36
+     ```
+   - Parallel processing for speed
+   - Automatic retry on failures
+
+4. 📄 **PDF Generation** (10-30 seconds)
+   - Creates organized PDF with all sections
+   - Professional formatting
+
+5. ✅ **Delivery**
+   - PDF sent to your Telegram chat
+   - Includes summary statistics
+
+### Analyzing a Newspaper PDF
+
+1. **Upload PDF** to the bot in Telegram
+2. Bot will:
+   - Extract all text content
+   - Filter UPSC-relevant articles
+   - Remove ads and irrelevant content
+   - Analyze each article
+   - Generate cleaned PDF
+   - Send analyzed PDF back (5-10 minutes depending on size)
+
+## 📁 Project Structure
+
+```
+NewsAgent/
+│
+├── main.py                  # Main bot application & handlers
+├── news_aggregator.py       # News fetching, aggregation, and analysis
+├── newspaper_analyzer.py    # PDF analysis and filtering
+├── pdf_generator.py         # PDF generation with section organization
+├── requirements.txt         # Python dependencies
+├── .env                     # Environment variables (create this)
+└── README.md               # This file
+```
+
+## 🏗️ Architecture & Key Components
+
+### 1. News Aggregator (`news_aggregator.py`)
+
+**Core Functionality:**
+- `fetch_upsc_news()`: Main function that fetches from all sources
+- `_fetch_from_*()`: Individual source fetchers (PIB, The Hindu, etc.)
+- `_remove_duplicates()`: Title-based duplicate detection
+- `_filter_upsc_relevant()`: Keyword-based relevance filtering
+- `_prepare_news_for_analysis()`: Normalizes and ensures minimum article count
+- `analyze_news()`: Parallel analysis orchestration
+- `_analyze_single_article()`: Individual article analysis with retry logic
+- `format_source_summary()`: Creates formatted summary with links
+
+**Features:**
+- Async/await for non-blocking operations
+- Semaphore-based rate limiting (10 concurrent requests)
+- Exponential backoff retry for 429 errors
+- Progress callbacks for real-time updates
+
+### 2. PDF Generator (`pdf_generator.py`)
+
+**Section Organization:**
+- All topics listed first
+- Grouped sections for each analysis type
+- Professional styling with colors and fonts
+- HTML sanitization for clean PDF output
+
+**Key Methods:**
+- `generate_news_pdf()`: Main PDF generation
+- `_clean_html_for_reportlab()`: Sanitizes HTML for PDF compatibility
+- `_extract_section()`, `_extract_bullet_points()`, `_extract_questions()`: Fallback parsers
+
+### 3. Newspaper Analyzer (`newspaper_analyzer.py`)
+
+- PDF text extraction
+- Article segmentation
+- Relevance filtering
+- Analysis generation
+
+### 4. Main Bot (`main.py`)
+
+**Handlers:**
+- `/start`: Welcome message
+- `news` command: Daily news analysis
+- PDF upload: Newspaper analysis
+- Progress tracking and error handling
+
+## ⚙️ Configuration & Customization
+
+### Adjusting Article Limits
+Edit `news_aggregator.py`:
+```python
+# In _prepare_news_for_analysis()
+news_data = news_data[:60]  # Change max articles
+if len(news_data) < 50:     # Change minimum threshold
+```
+
+### Modifying News Sources
+Add new sources in `news_aggregator.py`:
+```python
+async def _fetch_from_new_source(self) -> List[Dict]:
+    # Implement your source fetcher
+    pass
+
+# Add to fetch_upsc_news()
+news_sources.append(self._fetch_from_new_source())
+```
+
+### Changing UPSC Keywords
+Edit `upsc_relevant_topics` list in `NewsAggregator.__init__()`:
+```python
+self.upsc_relevant_topics = [
+    "government policy", "economy", 
+    # Add your keywords here
+]
+```
+
+### Adjusting Concurrency
+Edit `NewsAggregator.__init__()`:
+```python
+self.semaphore = asyncio.Semaphore(10)  # Change max concurrent requests
+```
+
+### Customizing PDF Style
+Edit `pdf_generator.py` in `_setup_custom_styles()`:
+- Font sizes
+- Colors
+- Spacing
+- Layout
+
+## 🔍 Troubleshooting
+
+### Bot Not Responding
+- ✅ Check if bot is running: `python main.py`
+- ✅ Verify `TELEGRAM_BOT_TOKEN` in `.env`
+- ✅ Check internet connection
+- ✅ Look for error messages in console
+
+### News Analysis Fails
+- ✅ Verify `NVIDIA_API_KEY` and `NVIDIA_MODEL` in `.env`
+- ✅ Check API credits/quota
+- ✅ Review console for specific error messages
+- ✅ Ensure model name is correct
+
+### 429 Rate Limit Errors
+- ✅ Bot automatically retries with exponential backoff
+- ✅ Reduce semaphore limit if issues persist (change `Semaphore(10)` to lower value)
+- ✅ Check your API rate limits
+
+### PDF Generation Errors
+- ✅ Ensure write permissions in directory
+- ✅ Verify all dependencies installed: `pip install -r requirements.txt --upgrade`
+- ✅ Check uploaded PDF is valid and not corrupted
+- ✅ Review error logs for HTML parsing issues
+
+### Progress Mismatch
+- ✅ Counts are now synchronized (fixed in latest version)
+- ✅ Initial message shows accurate total
+- ✅ Progress updates in real-time
+
+### Import Errors
+```bash
+pip install -r requirements.txt --upgrade
+```
+
+## 📊 Performance & Limits
+
+- **Analysis Speed**: ~2-5 minutes for 50-60 articles (parallel processing)
+- **Concurrency**: Up to 10 simultaneous API calls
+- **Article Limit**: Maximum 60 articles per analysis
+- **Minimum Guarantee**: At least 50 articles analyzed
+- **Rate Limiting**: Automatic with 3 retry attempts per article
+- **Progress Updates**: Real-time via Telegram messages
+
+## 🔐 Security & Best Practices
+
+- **API Keys**: Never commit `.env` file to version control
+- **Rate Limiting**: Built-in to prevent API abuse
+- **Error Handling**: Comprehensive try-catch blocks
+- **Cleanup**: Temporary files automatically deleted
+- **Validation**: Input validation for all user inputs
+
+## 📝 Important Notes
+
+### API Costs
+- NVIDIA API usage may have associated costs
+- Monitor usage through your NVIDIA dashboard
+- Consider caching frequently accessed articles
+
+### Accuracy Disclaimer
+- AI-generated analysis is for educational purposes
+- Always verify facts from official sources
+- Use as a study aid, not definitive answers
+- Cross-reference with official UPSC resources
+
+### Rate Limits
+- Respect API provider rate limits
+- Bot handles temporary limits automatically
+- For sustained limits, adjust semaphore value
+
+## 🚧 Future Enhancements
+
+Potential features to add:
+- [ ] Scheduled daily news digest
+- [ ] Topic-wise categorization
+- [ ] Revision flashcards generation
+- [ ] Previous year question mapping
+- [ ] Multi-language support
+- [ ] Voice note summaries
+- [ ] Quiz mode for self-assessment
+- [ ] Bookmark articles for later review
+- [ ] Export to different formats (DOCX, EPUB)
+- [ ] Integration with note-taking apps
+
+## 🆘 Support & Contributing
+
+### Getting Help
+1. Check the troubleshooting section above
+2. Review error messages in console output
+3. Verify all environment variables are correctly set
+4. Ensure API keys are valid and have sufficient credits
+
+### Reporting Issues
+When reporting issues, please include:
+- Error message from console
+- Steps to reproduce
+- Your `.env` configuration (without actual keys)
+- Python version: `python --version`
+- Package versions: `pip list`
+
+## 📄 License
+
+This project is provided as-is for educational purposes. Feel free to modify and enhance it for your needs.
+
+## 🙏 Acknowledgments
+
+- News sources for providing RSS feeds
+- NVIDIA for LLM inference capabilities
+- Telegram for bot platform
+- Open source libraries: LangChain, ReportLab, BeautifulSoup, and others
+
+---
+
+**Happy Learning! All the best for your UPSC preparation! 🎯📚**
+
+For questions or issues, check the troubleshooting section or review the code comments for detailed explanations.
